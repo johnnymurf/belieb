@@ -6,7 +6,5 @@ import { forwardArgs } from './args.js';
 // argument parsing and terminal cleanup in this process (no shell or child relay).
 const entry = new URL('./bundle/cli.js', import.meta.resolve('@earendil-works/pi-coding-agent'));
 const extension = fileURLToPath(new URL('./extension.js', import.meta.url));
-process.argv = [process.execPath, fileURLToPath(entry), ...forwardArgs(
-  process.argv.slice(2), Boolean(process.stdin.isTTY && process.stdout.isTTY), extension,
-)];
+process.argv = [process.execPath, fileURLToPath(entry), ...forwardArgs(process.argv.slice(2), extension)];
 await import(entry.href);

@@ -14,14 +14,12 @@ Source and license verified against Commons revision 1137584275, 23 October 2026
 Commons records that the Flickr license was verified on 12 October 2009;
 the later Flickr license change does not revoke that CC license.
 The Commons crop was uploaded by CrazyInSane and converted to JPEG by McZusatz.
-This project's further changes: an original 20 x 20 pixel-art reinterpretation
-using the photograph as a visual reference. It is redrawn at icon size, not
-resampled or dithered from the image, and is rendered in the terminal with
-Unicode half-block characters and a ten-colour palette. The low-saturation
-wall and lettering were omitted so the avatar sits cleanly on a terminal
-background.
+This project's further changes: the photograph was cropped, contrast-boosted,
+vignetted, converted to a 40 x 20 character Braille image (2 x 4 dots per
+character, dithered) and tinted with a pink-to-lilac gradient for the terminal
+(src/portrait.ts).
 No endorsement by the photographer is implied. The photo and the derived
-pixel-art interpretation retain CC BY 2.0 attribution, separate from the
+Braille image retain CC BY 2.0 attribution, separate from the
 MIT-licensed code.
 
 Powered by Pi (https://github.com/earendil-works/pi), originally created by
@@ -29,3 +27,5 @@ Mario Zechner, distributed under the MIT license. This package depends on
 @earendil-works/pi-coding-agent and @earendil-works/pi-tui, version 1.4.0.
 Their code and transitive dependencies retain their own copyright and license
 notices; belieb's MIT license covers its own code.
+The read-only command policy in src/plan.ts is adapted from Pi's MIT-licensed
+plan-mode example (examples/extensions/plan-mode).

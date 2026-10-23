@@ -1,18 +1,50 @@
 {
   "name": "belieb",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "An unofficial Bieber-inspired parody coding CLI, powered by Pi.",
   "type": "module",
   "license": "MIT",
-  "bin": { "belieb": "dist/cli.js" },
-  "files": ["dist", "README.md", "LICENSE", "NOTICE"],
-  "engines": { "node": ">=22.19.0" },
+  "bin": {
+    "belieb": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "prompts",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
     "build": "tsc && node scripts/executable.mjs",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",
     "prepack": "npm run build"
   },
-  "dependencies": { "@earendil-works/pi-coding-agent": "1.4.0", "@earendil-works/pi-tui": "1.4.0" },
-  "devDependencies": { "@types/node": "22.19.15", "typescript": "5.9.3" }
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.4.0",
+    "@earendil-works/pi-tui": "1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.15",
+    "typescript": "5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnnymurf/belieb.git"
+  },
+  "homepage": "https://github.com/johnnymurf/belieb#readme",
+  "bugs": {
+    "url": "https://github.com/johnnymurf/belieb/issues"
+  },
+  "keywords": [
+    "cli",
+    "coding-agent",
+    "pi",
+    "parody",
+    "mcp",
+    "terminal"
+  ]
 }
