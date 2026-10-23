@@ -1,0 +1,31 @@
+belieb is an unofficial, independent Bieber-inspired parody. It is not
+affiliated with, endorsed by, or sponsored by Justin Bieber, his representatives,
+or Pi's maintainers. Names belong to their respective owners.
+
+The terminal portrait is adapted from "Justin Bieber", photographed at the
+Nintendo Store signing in New York City on 1 September 2009.
+Photo: Kevin Aranibar of Kerosene Photography.
+Commons file: https://commons.wikimedia.org/wiki/File:Justin_Bieber.jpg
+Original source: https://www.flickr.com/photos/23903910@N04/3881926810/
+Download: https://upload.wikimedia.org/wikipedia/commons/5/58/Justin_Bieber.jpg
+License: Creative Commons Attribution 2.0 Generic (CC BY 2.0)
+https://creativecommons.org/licenses/by/2.0/
+Source and license verified against Commons revision 1137584275, 23 October 2026.
+Commons records that the Flickr license was verified on 12 October 2009;
+the later Flickr license change does not revoke that CC license.
+The Commons crop was uploaded by CrazyInSane and converted to JPEG by McZusatz.
+This project's further changes: an original 20 x 20 pixel-art reinterpretation
+using the photograph as a visual reference. It is redrawn at icon size, not
+resampled or dithered from the image, and is rendered in the terminal with
+Unicode half-block characters and a ten-colour palette. The low-saturation
+wall and lettering were omitted so the avatar sits cleanly on a terminal
+background.
+No endorsement by the photographer is implied. The photo and the derived
+pixel-art interpretation retain CC BY 2.0 attribution, separate from the
+MIT-licensed code.
+
+Powered by Pi (https://github.com/earendil-works/pi), originally created by
+Mario Zechner, distributed under the MIT license. This package depends on
+@earendil-works/pi-coding-agent and @earendil-works/pi-tui, version 1.4.0.
+Their code and transitive dependencies retain their own copyright and license
+notices; belieb's MIT license covers its own code.
