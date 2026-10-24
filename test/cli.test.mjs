@@ -180,7 +180,7 @@ test('TUI startup installs the avatar, footer and real working label, clipping n
     const header = calls.headers.at(-1)({ requestRender() {} }, tuiTheme());
     assert.ok(header.render(80).some(line => line.includes('mood: beliebing in your code')));
     assert.ok(header.render(120).some(line => line.includes('top friends: you, jb & git')));
-    assert.ok(header.render(80).every(line => !line.includes('Unofficial Bieber-inspired parody.')));
+    assert.ok(header.render(80).every(line => !/parody|unofficial/i.test(line)));
     assert.ok(header.render(8).every(line => line.length <= 8));
     assert.ok(header.render(0).every(line => line === ''));
 
@@ -728,7 +728,7 @@ test('real shipped CLI help and version work without credentials', () => {
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /--resume/);
   assert.match(help.stdout, /--mode/);
-  assert.doesNotMatch(help.stdout, /beliebing|Unofficial|~~~~/);
+  assert.doesNotMatch(help.stdout, /beliebing|parody|~~~~/i);
   const version = isolated(['--version']);
   assert.equal(version.status, 0, version.stderr);
   assert.equal(version.stdout.trim(), '1.4.0');
@@ -740,7 +740,7 @@ test('real print invocation fails honestly without credentials and without brand
   assert.equal(result.error, undefined);
   assert.notEqual(result.status, 0);
   assert.match(result.stdout + result.stderr, /API key|credentials|authentication/i);
-  assert.doesNotMatch(result.stdout + result.stderr, /beliebing|Unofficial|~~~~/);
+  assert.doesNotMatch(result.stdout + result.stderr, /beliebing|parody|~~~~/i);
 });
 
 test('RPC keeps stdout valid JSON and returns real state without credentials', () => {
@@ -749,7 +749,7 @@ test('RPC keeps stdout valid JSON and returns real state without credentials', (
   assert.equal(result.status, 0, result.stderr);
   const records = result.stdout.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   assert.ok(records.some(record => record.id === 'smoke' && record.success === true));
-  assert.doesNotMatch(result.stdout, /beliebing|Unofficial|~~~~/);
+  assert.doesNotMatch(result.stdout, /beliebing|parody|~~~~/i);
 });
 
 test('one undo reverts a whole turn and /redo replays it', async () => {

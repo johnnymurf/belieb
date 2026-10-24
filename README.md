@@ -14,12 +14,6 @@ ur like "but where is the swoop"?? well NOW there is **belieb**: a *real* coding
 agent with a hand-drawn terminal avatar, a Myspace profile card, and exactly
 the right amount of pink + purple. ily. 💜
 
-> **Disclaimer (the boring-but-important part, sry!!)** belieb is an unofficial,
-> independent Bieber-inspired parody, powered by [Pi](https://github.com/earendil-works/pi).
-> Not affiliated with or endorsed by Justin Bieber, his representatives, or Pi.
-> The model is a totally normal coding assistant. The parody is *presentation only*.
-> No fake model responses, no extra agent orchestration. Just vibes. ♥
-
 ---
 
 ## ~ about me ~
@@ -290,9 +284,10 @@ header. The gradient is memoized so streaming re-renders stay cheap.
 ## ~ credits & legal ~
 
 Own code: MIT, see [LICENSE](LICENSE). The terminal portrait is adapted from a
-CC BY 2.0 photo by Kevin Aranibar of Kerosene Photography; full attribution,
-changes and the unofficial parody notice are in [NOTICE](NOTICE). Names belong to
-their respective owners.
+CC BY 2.0 photo by Kevin Aranibar of Kerosene Photography; full attribution and
+change history are in [NOTICE](NOTICE). belieb is an independent project, not
+affiliated with Justin Bieber or with Pi's maintainers. Names belong to their
+respective owners.
 
 ---
 

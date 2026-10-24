@@ -278,7 +278,7 @@ async function run(
         lines: [
           'Portrait adapted from "Justin Bieber" by Kevin Aranibar (CC BY 2.0).',
           'Original: Wikimedia Commons / Flickr. Changed: cropped, dithered to Braille.',
-          'Runtime: Pi 1.4.0 (MIT). belieb is an unofficial parody, not affiliated.',
+          'Runtime: Pi 1.4.0 (MIT). independent project, not affiliated with Pi.',
           'Full attribution ships in NOTICE.',
         ],
       });

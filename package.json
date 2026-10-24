@@ -1,7 +1,7 @@
 {
   "name": "belieb",
   "version": "0.3.0",
-  "description": "An unofficial Bieber-inspired parody coding CLI, powered by Pi.",
+  "description": "A coding CLI with a Myspace profile card and a Braille portrait, powered by Pi.",
   "type": "module",
   "license": "MIT",
   "bin": {
@@ -43,7 +43,6 @@
     "cli",
     "coding-agent",
     "pi",
-    "parody",
     "mcp",
     "terminal"
   ]
