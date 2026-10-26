@@ -5,9 +5,11 @@ import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { Key } from '@earendil-works/pi-tui';
 
 import { Belieb } from './branding.js';
+import { registerBeliebers } from './beliebers.js';
 import { renderCard, renderPanel, type CardData, type PanelData } from './card.js';
 import { registerBeliebCommands } from './commands.js';
 import { loadConfig } from './config.js';
+import { registerMarket } from './market-command.js';
 import { isPlanContext, isSafePlanCommand } from './plan.js';
 
 // Shipped with the package; discovered without writing to the user's agent dir.
@@ -48,6 +50,9 @@ export default function belieb(pi: ExtensionAPI): void {
   });
   pi.on('session_start', (_event, ctx) => {
     state.start(ctx);
+  });
+  pi.on('model_select', (_event, ctx) => {
+    state.modelChanged(ctx);
   });
   pi.on('before_agent_start', (event) => {
     if (!state.inPlanMode || event.messageType !== 'user') return;
@@ -109,4 +114,6 @@ export default function belieb(pi: ExtensionAPI): void {
   }));
 
   registerBeliebCommands(pi, state);
+  registerBeliebers(pi, state);
+  registerMarket(pi);
 }

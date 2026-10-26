@@ -126,7 +126,9 @@ export function renderCard(width: number, theme: Theme, data: CardData): string[
     if (row >= 4 && row <= 7) {
       const word = logo[row - 4].padEnd(logoWidth + 2);
       const hack = (hackLines[row - 4] ?? '').padEnd(Math.max(0, textWidth - word.length));
-      right = (color ? gradient(word, mode, isLight) : word) + paint(hack, 'muted');
+      right = truncateToWidth(
+        (color ? gradient(word, mode, isLight) : word) + paint(hack, 'muted'), textWidth, '', false,
+      );
     } else if (row >= 9 && row <= 14) {
       const detail = details[row - 9];
       right = paint(compose(detail[0], row === 9 ? '● online' : '', textWidth), detail[1]);

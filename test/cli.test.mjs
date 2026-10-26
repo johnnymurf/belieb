@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -10,6 +10,7 @@ import { sessionTotals } from '../dist/usage.js';
 import extension from '../dist/extension.js';
 import { checkKind } from '../dist/checks.js';
 import { activeMcpServers } from '../dist/mcp.js';
+import { renderCard } from '../dist/card.js';
 import { pickMode } from '../dist/mode-picker.js';
 import { notificationSequence, notificationText, shouldNotify } from '../dist/notify.js';
 import { themeFor } from '../dist/palettes.js';
@@ -36,6 +37,7 @@ function isolated(args, input = '') {
 function harness() {
   const handlers = new Map();
   const commands = new Map();
+  const registeredTools = new Map();
   const renderers = new Map();
   const shortcuts = new Map();
   const flags = new Map();
@@ -47,6 +49,7 @@ function harness() {
       handlers.get(name).push(callback);
     },
     registerCommand(name, options) { commands.set(name, options); },
+    registerTool(tool) { registeredTools.set(tool.name, tool); },
     registerEntryRenderer(type, renderer) { renderers.set(type, renderer); },
     registerShortcut(shortcut, options) { shortcuts.set(shortcut, options); },
     registerFlag(name, options) { flags.set(name, options.default ?? false); },
@@ -57,7 +60,7 @@ function harness() {
     appendEntry(type, data) { entries.push({ type, data }); },
   };
   return {
-    pi, handlers, commands, renderers, shortcuts, flags, entries, activeTools,
+    pi, handlers, commands, registeredTools, renderers, shortcuts, flags, entries, activeTools,
     async emit(name, event = {}, ctx) {
       const results = [];
       for (const callback of handlers.get(name) ?? []) results.push(await callback(event, ctx));
@@ -217,6 +220,13 @@ test('wide colour terminal gets the Myspace profile card', async () => {
     process.argv.pop();
     if (previous === undefined) delete process.env.NO_COLOR;
     else process.env.NO_COLOR = previous;
+  }
+});
+
+test('startup card fits intermediate terminal widths without overflowing the wordmark', () => {
+  const data = { mood: 'purpose', branch: 'main', views: 1, since: '12:00', playing: 'lofi & lints', plan: false };
+  for (let width = 70; width <= 100; width++) {
+    assert.ok(renderCard(width, tuiTheme(), data).every(line => visibleWidth(line) <= width), `width ${width}`);
   }
 });
 
@@ -926,6 +936,148 @@ test('--plan is a real flag in headless runs, not an unknown option', () => {
   assert.notEqual(result.status, 0);
   assert.doesNotMatch(result.stdout + result.stderr, /Unknown option/);
   assert.match(result.stdout + result.stderr, /API key|credentials|authentication/i);
+});
+
+test('subscription allowances appear in the footer before metadata and follow model/plain-mode changes', async () => {
+  const originalFetch = globalThis.fetch;
+  const previousColor = process.env.NO_COLOR;
+  const previousDir = process.env.BELIEB_DIR;
+  const dir = mkdtempSync(join(tmpdir(), 'belieb-quota-'));
+  process.env.BELIEB_DIR = dir;
+  process.env.NO_COLOR = '1';
+  const run = harness();
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests++;
+    return Response.json({ five_hour: { utilization: 28 }, seven_day: { utilization: 90 } });
+  };
+  try {
+    extension(run.pi);
+    const { ui, calls } = tui();
+    const ctx = context('tui', ui, {
+      model: { provider: 'anthropic', id: 'test-model', name: 'Claude' },
+      modelRegistry: {
+        isUsingOAuth: () => true,
+        getProviderAuth: async () => ({ auth: { apiKey: 'fake-token' } }),
+      },
+    });
+    await run.emit('session_start', {}, ctx);
+    await new Promise(resolve => setImmediate(resolve));
+    const factory = calls.footers.at(-1);
+    const footer = footerLine(factory, 120);
+    assert.match(footer, /♥ belieb · 5h 72% left · week 10% left/);
+    assert.ok(footer.includes('Claude'));
+    assert.ok(footerLine(factory, 40).includes('week 10% left'));
+    for (const width of [0, 8, 20, 40, 58, 78, 120]) {
+      assert.ok(visibleWidth(footerLine(factory, width)) <= width);
+    }
+    const colors = [];
+    const theme = { ...tuiTheme(), fg(token, text) { colors.push([token, text]); return text; } };
+    delete process.env.NO_COLOR;
+    factory({ requestRender() {} }, theme, footerData).render(120);
+    assert.ok(colors.some(([token, text]) => token === 'warning' && text === 'week 10% left'));
+    assert.ok(colors.some(([token, text]) => token === 'dim' && text === '5h 72% left'));
+
+    const apiCtx = { ...ctx, model: { provider: 'other', name: 'API model' } };
+    await run.emit('model_select', { model: apiCtx.model }, apiCtx);
+    assert.doesNotMatch(footerLine(factory, 120), /% left|limits/);
+    await run.emit('model_select', { model: ctx.model }, ctx);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(footerLine(factory, 120), /5h 72% left/);
+    assert.equal(requests, 2);
+    await run.commands.get('belieb').handler('off', ctx);
+    assert.equal(calls.footers.at(-1), undefined);
+    assert.doesNotMatch(footerLine(factory, 120), /% left|limits/);
+    await run.emit('session_shutdown', {}, ctx);
+  } finally {
+    await run.emit('session_shutdown', {}, context('tui', tui().ui));
+    globalThis.fetch = originalFetch;
+    if (previousColor === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = previousColor;
+    if (previousDir === undefined) delete process.env.BELIEB_DIR;
+    else process.env.BELIEB_DIR = previousDir;
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('OpenCode usage source is opt-in, persisted, source-labeled and replaces only ChatGPT usage status', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'belieb-opencode-footer-'));
+  const previous = { dir: process.env.BELIEB_DIR, xdg: process.env.XDG_DATA_HOME, fetch: globalThis.fetch,
+    color: process.env.NO_COLOR };
+  process.env.NO_COLOR = '1';
+  process.env.BELIEB_DIR = join(dir, 'belieb');
+  process.env.XDG_DATA_HOME = dir;
+  mkdirSync(join(dir, 'opencode'));
+  const token = `header.${Buffer.from(JSON.stringify({
+    'https://api.openai.com/auth': { chatgpt_account_id: 'fixture-account' },
+  })).toString('base64url')}.signature`;
+  writeFileSync(join(dir, 'opencode', 'auth.json'), JSON.stringify({
+    openai: { type: 'oauth', access: token, accountId: 'fixture-account' },
+  }));
+  let requests = 0;
+  globalThis.fetch = async (url, options) => {
+    requests++;
+    assert.equal(url, 'https://chatgpt.com/backend-api/wham/usage');
+    assert.equal(options.headers.Authorization, `Bearer ${token}`);
+    return Response.json({ rate_limit: {
+      primary_window: { used_percent: 28, limit_window_seconds: 18000 },
+      secondary_window: { used_percent: 59, limit_window_seconds: 604800 },
+    } });
+  };
+  const run = harness();
+  const { ui, calls } = tui();
+  const ctx = context('tui', ui, {
+    model: { provider: 'openai', name: 'Sol', baseUrl: 'https://api.openai.com/v1' },
+    modelRegistry: {
+      isUsingOAuth: () => true,
+      getProviderAuth: async () => ({ auth: { apiKey: 'native-not-for-chatgpt' } }),
+    },
+  });
+  try {
+    extension(run.pi);
+    await run.emit('session_start', {}, ctx);
+    await new Promise(resolve => setImmediate(resolve));
+    const factory = calls.footers.at(-1);
+    const data = { ...footerData, getExtensionStatuses: () => new Map([
+      ['usage', 'chatgpt usage: web only'], ['other', 'other extension'], ['belieb-checks', 'tests ✓'],
+    ]) };
+    const render = width => factory({ requestRender() {} }, tuiTheme(), data).render(width)[0];
+    assert.equal(requests, 0);
+    assert.match(render(180), /chatgpt usage: web only/);
+    const command = run.commands.get('belieb');
+    assert.deepEqual(command.getArgumentCompletions('usage o').map(x => x.value), ['opencode']);
+    await command.handler('usage opencode', ctx);
+    for (let i = 0; i < 100 && !requests; i++) await new Promise(resolve => setTimeout(resolve, 5));
+    assert.equal(requests, 1);
+    assert.match(render(180), /OpenCode 5h 72% left · week 41% left/);
+    assert.doesNotMatch(render(180), /chatgpt usage: web only/);
+    assert.match(render(180), /other extension/);
+    assert.match(render(180), /tests ✓/);
+    assert.equal(JSON.parse(readFileSync(join(dir, 'belieb', 'config.json'))).openCodeUsage, true);
+    for (const width of [0, 8, 20, 40, 58, 78, 120]) assert.ok(visibleWidth(render(width)) <= width);
+    await command.handler('usage pi', ctx);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.doesNotMatch(render(180), /OpenCode|% left/);
+    assert.match(render(180), /chatgpt usage: web only/);
+    assert.equal(JSON.parse(readFileSync(join(dir, 'belieb', 'config.json'))).openCodeUsage, false);
+    assert.equal(requests, 1);
+    // Failed persistence cannot enable external credential reads.
+    rmSync(join(dir, 'belieb'), { recursive: true });
+    writeFileSync(join(dir, 'belieb'), 'not a directory');
+    await command.handler('usage opencode', ctx);
+    assert.match(calls.notifications.at(-1).message, /unchanged/);
+    assert.equal(requests, 1);
+  } finally {
+    await run.emit('session_shutdown', {}, ctx);
+    globalThis.fetch = previous.fetch;
+    if (previous.dir === undefined) delete process.env.BELIEB_DIR;
+    else process.env.BELIEB_DIR = previous.dir;
+    if (previous.xdg === undefined) delete process.env.XDG_DATA_HOME;
+    else process.env.XDG_DATA_HOME = previous.xdg;
+    if (previous.color === undefined) delete process.env.NO_COLOR;
+    else process.env.NO_COLOR = previous.color;
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('active MCP servers are derived from connected tool namespaces', () => {

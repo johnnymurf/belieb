@@ -14,6 +14,7 @@ const subcommands: AutocompleteItem[] = [
   { value: 'redo', label: 'redo', description: 'Re-apply the last undone turn' },
   { value: 'cost', label: 'cost', description: 'Show session tokens and spend' },
   { value: 'notify', label: 'notify', description: 'Turn finish notifications on or off' },
+  { value: 'usage', label: 'usage', description: 'Choose Pi or OpenCode login for footer limits' },
   { value: 'plan', label: 'plan', description: 'Enter read-only plan mode' },
   { value: 'belieb', label: 'belieb', description: 'Return to full belieb mode' },
   { value: 'off', label: 'off', description: 'Turn decoration off, back to plain Pi' },
@@ -31,6 +32,11 @@ function completions(prefix: string): AutocompleteItem[] {
     return moodNames
       .filter(name => name.startsWith(fragment))
       .map(name => ({ value: name, label: name, description: moods[name].label }));
+  }
+  if (text.startsWith('usage ')) {
+    const fragment = text.slice('usage '.length).trim();
+    return ['pi', 'opencode'].filter(value => value.startsWith(fragment))
+      .map(value => ({ value, label: value }));
   }
   const fragment = text.split(/\s+/)[0] ?? '';
   return subcommands.filter(item => item.value.startsWith(fragment));
@@ -189,7 +195,7 @@ async function run(
   switch (subcommand) {
     case '':
     case 'help': {
-      ctx.ui.notify('♥ /belieb mode|mood|undo|redo|cost|notify|plan|belieb|off|on|card|mcp|stats|credits', 'info');
+      ctx.ui.notify('♥ /belieb mode|mood|undo|redo|cost|notify|usage|plan|belieb|off|on|card|mcp|stats|credits', 'info');
       return;
     }
     case 'plan': {
@@ -214,6 +220,26 @@ async function run(
           'info',
         );
       }
+      return;
+    }
+    case 'usage': {
+      const source = rest[0];
+      if (rest.length !== 1 || (source !== 'pi' && source !== 'opencode')) {
+        ctx.ui.notify(`footer limits: ${belieb.config.openCodeUsage ? 'OpenCode' : 'Pi'} (use /belieb usage pi|opencode)`, 'info');
+        return;
+      }
+      // Persist consent before opening any external credential file.
+      const config = { ...belieb.config, openCodeUsage: source === 'opencode' };
+      try {
+        saveConfig(config);
+      } catch {
+        ctx.ui.notify('could not save usage source; unchanged', 'warning');
+        return;
+      }
+      belieb.setUsageSource(config.openCodeUsage);
+      ctx.ui.notify(source === 'opencode'
+        ? 'footer limits: OpenCode login (read-only). Ensure it uses your intended ChatGPT account/workspace. Pi inference is unchanged.'
+        : 'footer limits: Pi login. OpenCode credentials will no longer be read.', 'info');
       return;
     }
     case 'mood': {

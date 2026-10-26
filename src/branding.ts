@@ -11,6 +11,7 @@ import { activeMcpServers, type McpServerInfo } from './mcp.js';
 import { notificationSequence, notificationText, shouldNotify } from './notify.js';
 import { moods, themeFor, type Mood } from './palettes.js';
 import { PLAN_CONTEXT, planModeWriteTools } from './plan.js';
+import { SubscriptionUsage } from './subscription-usage.js';
 import {
   billedTokens, costSegment, emptyTotals, formatTokens, formatUsd, sessionTotals, type Totals,
 } from './usage.js';
@@ -60,6 +61,7 @@ export class Belieb {
   private totals: Totals = emptyTotals();
   private runStartedAt = 0;
   private since = '';
+  private readonly subscription = new SubscriptionUsage(() => this.refresh());
 
   constructor(pi: ExtensionAPI, config: BeliebConfig) {
     this.pi = pi;
@@ -69,6 +71,7 @@ export class Belieb {
   }
 
   start(ctx: ExtensionContext): void {
+    this.subscription.stop();
     this.ctx = ctx;
     this.resetPlanMode();
     this.turns = 0;
@@ -88,6 +91,7 @@ export class Belieb {
   }
 
   stop(): void {
+    this.subscription.stop();
     const ctx = this.ctx;
     if (!ctx || ctx.mode !== 'tui') return;
     if (!this.themeLocked && !process.env.NO_COLOR && this.baseTheme) {
@@ -112,6 +116,18 @@ export class Belieb {
   disable(): void {
     this.config.plain = true;
     this.stop();
+  }
+
+  modelChanged(ctx: ExtensionContext): void {
+    this.ctx = ctx;
+    if (this.visible) this.subscription.start(ctx, this.config.openCodeUsage);
+    this.refresh();
+  }
+
+  setUsageSource(openCode: boolean): void {
+    this.config.openCodeUsage = openCode;
+    if (this.visible && this.ctx) this.subscription.start(this.ctx, openCode);
+    this.refresh();
   }
 
   setMood(mood: Mood): boolean {
@@ -222,6 +238,7 @@ export class Belieb {
     this.phrase = 'beliebing…';
     this.refreshTotals();
     if (this.visible) {
+      void this.subscription.refresh();
       this.ctx?.ui.setWorkingMessage('beliebing…');
       this.ctx?.ui.setHiddenThinkingLabel('beliebing…');
     }
@@ -231,6 +248,7 @@ export class Belieb {
   }
 
   dispose(): void {
+    this.subscription.stop();
     this.resetPlanMode();
     this.ctx = undefined;
     this.headerTui = undefined;
@@ -266,6 +284,7 @@ export class Belieb {
       `undo       ${this.checkpoints.size} snapshot${this.checkpoints.size === 1 ? '' : 's'}`
         + (this.checkpoints.redoCount > 0 ? ` · ${this.checkpoints.redoCount} redoable` : ''),
       `notify     ${this.config.notify ? 'on' : 'off'}`,
+      `limits     ${this.config.openCodeUsage ? 'OpenCode login for native OpenAI (may be a different account)' : 'Pi login'}`,
       `mcp        ${this.mcpServers().map(server => server.name).join(', ') || 'none'}`,
       `branch     ${this.branch ?? 'none'}`,
       `plain      ${this.config.plain ? 'on' : 'off'}`,
@@ -391,6 +410,7 @@ export class Belieb {
         render: (width: number) => this.renderFooter(width, theme, data),
       };
     });
+    this.subscription.start(ctx, this.config.openCodeUsage);
   }
 
   private frames(): string[] {
@@ -428,6 +448,8 @@ export class Belieb {
     };
 
     add(this.planMode ? paint('warning', '⏸ plan') : paint('accent', '♥ belieb'));
+    // Allowances take priority over model/branch metadata on narrow terminals.
+    for (const quota of this.subscription.segments()) add(paint(quota.low ? 'warning' : 'dim', quota.text));
     if (width >= 78 && this.ctx?.model?.name) add(paint('muted', this.ctx.model.name));
     if (width >= 58 && this.branch) add(paint('mdHeading', this.branch));
     const percent = this.ctx?.getContextUsage?.()?.percent;
@@ -445,6 +467,10 @@ export class Belieb {
       ? [...data.getExtensionStatuses()]
       : [];
     for (const [key, status] of statuses) {
+      // pi-usage cannot use OpenCode's login. Its native ChatGPT fallback would
+      // contradict the explicitly selected source; leave all other statuses alone.
+      if (key === 'usage' && this.config.openCodeUsage && this.ctx?.model?.provider === 'openai'
+        && status.startsWith('chatgpt ')) continue;
       const token: ThemeColor = key === 'belieb-checks'
         ? status.includes('✗') ? 'error' : 'success'
         : 'muted';
